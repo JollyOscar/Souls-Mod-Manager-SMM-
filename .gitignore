@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / Packaging
+build/
+dist/
+*.spec
+# Ignore the compiled app, but keep the asset executables
+Souls_Mod_Manager.exe
+
+# User Configuration & Runtime Data
+profiles.json
+_Save_Backups/
+_Mod_Switchboard/
+*.log
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# VS Code
+.vscode/

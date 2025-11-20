@@ -1,0 +1,60 @@
+@echo off
+setlocal
+:: ARGS: [1:ModName] [2:LauncherPath] [3:Ignored] [4:GameDir]
+
+set "MOD_NAME=%~1"
+set "LAUNCHER=%~2"
+set "GAME_DIR=%~4"
+set "SAVE_ROOT=%APPDATA%\EldenRing"
+set "BACKUP_DIR=%SAVE_ROOT%\_Save_Backups\%MOD_NAME%"
+
+echo [SMM] Launching Elden Ring: %MOD_NAME%
+
+:: 1. Safety Nuke
+taskkill /F /IM "eldenring.exe" >nul 2>&1
+echo [SMM] Clearing live save state...
+for /d %%D in ("%SAVE_ROOT%\*") do (
+    del /Q "%%D\*.*" >nul 2>&1
+)
+
+:: 2. Inject State
+if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
+echo [SMM] Importing save state...
+for /d %%D in ("%SAVE_ROOT%\*") do (
+    copy /Y "%BACKUP_DIR%\*.*" "%%D\" >nul 2>&1
+)
+
+:: 3. Launch
+if "%LAUNCHER%"=="NONE" (
+    echo [SMM] Launching Vanilla via Steam...
+    start steam://rungameid/1245620
+) else (
+    echo [SMM] Launching Mod Script...
+    for %%I in ("%LAUNCHER%") do (
+        echo [SMM] Running: %%~nxI
+        start "" /D "%%~dpI" "%%~nxI"
+    )
+)
+
+:: 4. Watchdog
+echo [SMM] Monitoring session...
+:WAIT_START
+timeout /t 2 >nul
+tasklist /FI "IMAGENAME eq eldenring.exe" 2>NUL | find /I /N "eldenring.exe">NUL
+if "%ERRORLEVEL%"=="1" goto WAIT_START
+
+:WAIT_CLOSE
+timeout /t 5 >nul
+tasklist /FI "IMAGENAME eq eldenring.exe" 2>NUL | find /I /N "eldenring.exe">NUL
+if "%ERRORLEVEL%"=="0" goto WAIT_CLOSE
+
+:: 5. Backup & Cleanup
+echo [SMM] Capturing save state...
+for /d %%D in ("%SAVE_ROOT%\*") do (
+    copy /Y "%%D\*.*" "%BACKUP_DIR%\" >nul
+    del /Q "%%D\*.*" >nul
+)
+
+echo [SMM] State saved. Safe to close.
+timeout /t 3
+exit
