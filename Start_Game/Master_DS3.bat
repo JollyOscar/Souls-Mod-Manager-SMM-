@@ -42,8 +42,8 @@ if "%MOD_PATH%"=="NONE" (
 
 ) else if exist "%MOD_PATH%\*" (
     :: DIRECTORY -> DLL INJECTION MODE
-    echo [SMM] Injecting Mod DLLs...
-    copy /Y "%MOD_PATH%\*" "%GAME_DIR%\" >nul
+    echo [SMM] Injecting Mod DLLs and Folders...
+    xcopy "%MOD_PATH%\*" "%GAME_DIR%\" /E /Y /I /Q >nul
     echo [SMM] Launching Game...
     cd /d "%GAME_DIR%"
     start "" "DarkSoulsIII.exe"
