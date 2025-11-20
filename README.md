@@ -1,5 +1,7 @@
 # SOULS MOD MANAGER (SMM) - UNIVERSAL LAUNCHER
 
+[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-blue?style=for-the-badge&logo=windows)](https://github.com/JollyOscar/Souls-Mod-Manager-SMM-/releases/latest)
+
 **Version:** 2.1  
 **Target Games:** Dark Souls III, Elden Ring
 
