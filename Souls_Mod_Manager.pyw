@@ -116,12 +116,41 @@ def create_dirs_and_install(ds3_path, er_path):
     appdata = os.environ['APPDATA']
 
     if er_path:
-        p = os.path.join(appdata, "EldenRing", "_Save_Backups", "Vanilla")
-        if not os.path.exists(p): os.makedirs(p)
+        save_root = os.path.join(appdata, "EldenRing")
+        backup_dest = os.path.join(save_root, "_Save_Backups", "Vanilla")
+        if not os.path.exists(backup_dest): os.makedirs(backup_dest)
+        
+        # Perform Initial Backup
+        if os.path.exists(save_root):
+            count = 0
+            for root_dir, dirs, files in os.walk(save_root):
+                if "_Save_Backups" in root_dir: continue
+                for file in files:
+                    if "GraphicsConfig" not in file:
+                        try: 
+                            shutil.copy2(os.path.join(root_dir, file), backup_dest)
+                            count += 1
+                        except: pass
+            if count > 0: status_msg += f"\n✔ Backed up {count} Elden Ring saves."
 
     if ds3_path:
-        p = os.path.join(appdata, "DarkSoulsIII", "_Save_Backups", "Vanilla")
-        if not os.path.exists(p): os.makedirs(p)
+        save_root = os.path.join(appdata, "DarkSoulsIII")
+        backup_dest = os.path.join(save_root, "_Save_Backups", "Vanilla")
+        if not os.path.exists(backup_dest): os.makedirs(backup_dest)
+        
+        # Perform Initial Backup
+        if os.path.exists(save_root):
+            count = 0
+            for root_dir, dirs, files in os.walk(save_root):
+                if "_Save_Backups" in root_dir: continue
+                for file in files:
+                    if "GraphicsConfig" not in file:
+                        try: 
+                            shutil.copy2(os.path.join(root_dir, file), backup_dest)
+                            count += 1
+                        except: pass
+            if count > 0: status_msg += f"\n✔ Backed up {count} DS3 saves."
+
         sb_root = os.path.join(ds3_path, "_Mod_Switchboard", "Executables")
         if not os.path.exists(sb_root): os.makedirs(sb_root)
 
@@ -136,8 +165,8 @@ def create_dirs_and_install(ds3_path, er_path):
                     if os.path.isfile(src):
                         shutil.copy2(src, dst)
                         copied += 1
-                if copied > 0: status_msg = f"✔ Installed {copied} DS3 Executables."
-            except Exception as e: status_msg = f"❌ DS3 Install Error: {e}"
+                if copied > 0: status_msg += f"\n✔ Installed {copied} DS3 Executables."
+            except Exception as e: status_msg += f"\n❌ DS3 Install Error: {e}"
 
     return status_msg
 
