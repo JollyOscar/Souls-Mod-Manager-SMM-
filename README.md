@@ -15,6 +15,9 @@ It allows you to swap between Vanilla (Online) and multiple Mods (Offline) witho
 * **Safe Save Swapping:** Mods get their own save "box". They never touch Vanilla.
 * **Universal Support:** Works with DLL mods (Cinders) and External Launchers (Reforged).
 * **"Vacuum" Backups:** Automatically captures every file in your save folder.
+* **Multi-Account Support:** Safely handles multiple Steam IDs without overwriting saves.
+* **Full Folder Mirroring:** Supports complex save structures (like Convergence's .cnv files).
+* **Crash Recovery:** If the launcher crashes, your saves are automatically moved to a `_RESCUE` folder on next launch.
 
 ---
 
@@ -22,12 +25,47 @@ It allows you to swap between Vanilla (Online) and multiple Mods (Offline) witho
 
 1. Extract this folder anywhere (Desktop, Documents, etc.).
    * **DO NOT** run the app from inside the Zip file.
-2. Run `Souls_Mod_Manager.exe`.
+2. Run `RUNTHISFIRST.bat`.
+   * This will check your files and create a Desktop Shortcut for you.
 3. **FIRST TIME SETUP:**
-   * The app will detect it is new.
-   * It will ask you to locate your "Dark Souls III" and "Elden Ring" Game Folders.
-   * Select the folders where `DarkSoulsIII.exe` and `eldenring.exe` live.
-   * **AUTO-INSTALLER:** The app will automatically copy the required DS3 Executables (Legacy & Modern) into your game folder for you. You will see a confirmation message if successful.
+   * **AUTO-DETECT:** The app will attempt to automatically find your games on Steam.
+   * If not found, manually select the folders where `DarkSoulsIII.exe` and `eldenring.exe` live.
+   * **AUTO-INSTALLER:** The app will automatically copy the required DS3 Executables (Legacy & Modern) into your game folder for you.
+
+---
+
+## FILE STRUCTURE GUIDE
+
+For the manager to work best, ensure your folders look like this:
+
+### 1. ELDEN RING
+
+**Standard Steam Path:** `C:\Program Files (x86)\Steam\steamapps\common\ELDEN RING\Game`
+
+* `eldenring.exe` (The Game)
+* `_Mod_Switchboard\` (Created by SMM)
+
+**Mod Setup (Example: Convergence):**
+
+* Download the mod.
+* Place it anywhere (e.g., `C:\Mods\ConvergenceER`).
+* Inside, you should see `launch_mod.bat` or similar.
+* **In SMM:** Select that `.bat` file.
+
+### 2. DARK SOULS III
+
+**Standard Steam Path:** `C:\Program Files (x86)\Steam\steamapps\common\DARK SOULS III\Game`
+
+* `DarkSoulsIII.exe` (The Game)
+* `DarkSoulsIII_Legacy.exe` (Installed by SMM)
+* `DarkSoulsIII_Modern.exe` (Installed by SMM)
+
+**Mod Setup (Example: Cinders):**
+
+* Download the mod.
+* Place it anywhere (e.g., `C:\Mods\Cinders`).
+* Inside, you should see `dinput8.dll` and a `Cinders` folder.
+* **In SMM:** Select this **Folder**.
 
 ---
 

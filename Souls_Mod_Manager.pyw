@@ -6,6 +6,8 @@ import sys
 import json
 import shutil
 from PIL import Image, ImageTk
+import winreg
+import datetime
 
 # =============================================================================
 # CONFIGURATION
@@ -64,6 +66,54 @@ def run_first_time_setup(root_window):
 
     paths = {"ds3": "", "er": ""}
 
+    def auto_detect_games():
+        # Helper to find steam games via Registry or Common Paths
+        def find_game(app_id, exe_name, folder_name):
+            # 1. Registry Search
+            try:
+                key_path = f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App {app_id}"
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+                    install_path = winreg.QueryValueEx(key, "InstallLocation")[0]
+                    # Check /Game/ subdir first (Standard for Souls)
+                    if os.path.exists(os.path.join(install_path, "Game", exe_name)):
+                        return os.path.join(install_path, "Game")
+                    if os.path.exists(os.path.join(install_path, exe_name)):
+                        return install_path
+            except: pass
+
+            # 2. Common Paths Search
+            drives = [f"{d}:\\" for d in "CDEFGHIJKLMNOPQRSTUVWXYZ" if os.path.exists(f"{d}:\\")]
+            common_libs = [
+                r"Program Files (x86)\Steam\steamapps\common",
+                r"Program Files\Steam\steamapps\common",
+                r"SteamLibrary\steamapps\common",
+                r"Steam\steamapps\common"
+            ]
+            
+            for drive in drives:
+                for lib in common_libs:
+                    full_path = os.path.join(drive, lib, folder_name, "Game")
+                    if os.path.exists(os.path.join(full_path, exe_name)): return full_path
+                    
+                    full_path_root = os.path.join(drive, lib, folder_name)
+                    if os.path.exists(os.path.join(full_path_root, exe_name)): return full_path_root
+            return ""
+
+        # Attempt Detection
+        ds3_found = find_game("374320", "DarkSoulsIII.exe", "DARK SOULS III")
+        er_found = find_game("1245620", "eldenring.exe", "ELDEN RING")
+
+        if ds3_found:
+            paths["ds3"] = ds3_found
+            btn_ds3.config(text=f"DS3 Detected: {ds3_found[:30]}...", fg="#00FF00")
+        
+        if er_found:
+            paths["er"] = er_found
+            btn_er.config(text=f"ER Detected: {er_found[:30]}...", fg="#00FF00")
+
+        if ds3_found or er_found:
+            messagebox.showinfo("Auto-Detect", "Games detected automatically! Click 'FINISH SETUP' if they look correct.")
+
     def browse_ds3():
         path = filedialog.askdirectory(title="Select Dark Souls III Game Folder")
         if path:
@@ -86,10 +136,25 @@ def run_first_time_setup(root_window):
     btn_er = tk.Button(setup_win, text="Browse Elden Ring Folder...", command=browse_er, font=FONT_MAIN, width=35, bg="#333", fg="white", bd=0)
     btn_er.pack(pady=15)
 
+    # Run Auto-Detect on Launch
+    setup_win.after(500, auto_detect_games)
+
     def finish_setup():
         if not paths["ds3"] and not paths["er"]:
             messagebox.showwarning("Incomplete", "Please select at least one game folder.")
             return
+
+        # Check for Save Folders (Backend Verification)
+        appdata = os.environ['APPDATA']
+        missing_saves = []
+        if paths["ds3"] and not os.path.exists(os.path.join(appdata, "DarkSoulsIII")):
+            missing_saves.append("Dark Souls III")
+        if paths["er"] and not os.path.exists(os.path.join(appdata, "EldenRing")):
+            missing_saves.append("Elden Ring")
+            
+        if missing_saves:
+            msg = f"Warning: Save folders not found for:\n{', '.join(missing_saves)}\n\nIf you have not played these games yet, please launch them once to create the save structure."
+            messagebox.showwarning("Save Folder Missing", msg)
 
         default_data = {
             "settings": { "ds3_path": paths["ds3"], "er_path": paths["er"] },
@@ -114,42 +179,94 @@ def run_first_time_setup(root_window):
 def create_dirs_and_install(ds3_path, er_path):
     status_msg = ""
     appdata = os.environ['APPDATA']
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     if er_path:
         save_root = os.path.join(appdata, "EldenRing")
-        backup_dest = os.path.join(save_root, "_Save_Backups", "Vanilla")
+        # Create a Timestamped Backup of whatever is currently in the folder
+        # This ensures we capture "Leftover" saves or "Manual" progress without overwriting existing Vanilla backups
+        backup_dest = os.path.join(save_root, "_Save_Backups", f"Imported_{timestamp}")
         if not os.path.exists(backup_dest): os.makedirs(backup_dest)
         
         # Perform Initial Backup
         if os.path.exists(save_root):
             count = 0
-            for root_dir, dirs, files in os.walk(save_root):
-                if "_Save_Backups" in root_dir: continue
+            for item in os.listdir(save_root):
+                s = os.path.join(save_root, item)
+                d = os.path.join(backup_dest, item)
+                if os.path.isdir(s) and item != "_Save_Backups":
+                    try:
+                        shutil.copytree(s, d)
+                        count += 1
+                    except Exception as e: print(f"Backup Error: {e}")
+            if count > 0: 
+                status_msg += f"\n✔ Created Safety Backup of {count} Elden Ring profiles to 'Imported_{timestamp}'."
+                
+                # Also ensure a "Vanilla" folder exists for the UI to use
+                vanilla_dest = os.path.join(save_root, "_Save_Backups", "Vanilla")
+                if not os.path.exists(vanilla_dest):
+                    try:
+                        shutil.copytree(backup_dest, vanilla_dest)
+                        status_msg += "\n✔ Established initial 'Vanilla' profile."
+                    except: pass
+
+        # SMART SORT: Detect specific mod extensions and create dedicated backups
+        mod_map = {
+            ".cnv": "Convergence",
+            ".co2": "Seamless Coop",
+            ".err": "Reforged"
+        }
+        detected_mods = []
+        
+        if os.path.exists(save_root):
+            for root, dirs, files in os.walk(save_root):
+                if "_Save_Backups" in root: continue
+                
                 for file in files:
-                    if "GraphicsConfig" not in file:
-                        try: 
-                            shutil.copy2(os.path.join(root_dir, file), backup_dest)
-                            count += 1
+                    ext = os.path.splitext(file)[1].lower()
+                    if ext in mod_map:
+                        mod_name = mod_map[ext]
+                        
+                        # Calculate destination: _Save_Backups/ModName/SteamID/
+                        rel_path = os.path.relpath(root, save_root)
+                        target_dir = os.path.join(save_root, "_Save_Backups", mod_name, rel_path)
+                        
+                        if not os.path.exists(target_dir): os.makedirs(target_dir)
+                        
+                        try:
+                            shutil.copy2(os.path.join(root, file), target_dir)
+                            if mod_name not in detected_mods: detected_mods.append(mod_name)
                         except: pass
-            if count > 0: status_msg += f"\n✔ Backed up {count} Elden Ring saves."
+                        
+        if detected_mods:
+            status_msg += f"\n✔ Detected & Organized saves for: {', '.join(detected_mods)}"
 
     if ds3_path:
         save_root = os.path.join(appdata, "DarkSoulsIII")
-        backup_dest = os.path.join(save_root, "_Save_Backups", "Vanilla")
+        backup_dest = os.path.join(save_root, "_Save_Backups", f"Imported_{timestamp}")
         if not os.path.exists(backup_dest): os.makedirs(backup_dest)
         
         # Perform Initial Backup
         if os.path.exists(save_root):
             count = 0
-            for root_dir, dirs, files in os.walk(save_root):
-                if "_Save_Backups" in root_dir: continue
-                for file in files:
-                    if "GraphicsConfig" not in file:
-                        try: 
-                            shutil.copy2(os.path.join(root_dir, file), backup_dest)
-                            count += 1
-                        except: pass
-            if count > 0: status_msg += f"\n✔ Backed up {count} DS3 saves."
+            for item in os.listdir(save_root):
+                s = os.path.join(save_root, item)
+                d = os.path.join(backup_dest, item)
+                if os.path.isdir(s) and item != "_Save_Backups":
+                    try:
+                        shutil.copytree(s, d)
+                        count += 1
+                    except Exception as e: print(f"Backup Error: {e}")
+            if count > 0: 
+                status_msg += f"\n✔ Created Safety Backup of {count} DS3 profiles to 'Imported_{timestamp}'."
+
+                # Also ensure a "Vanilla" folder exists for the UI to use
+                vanilla_dest = os.path.join(save_root, "_Save_Backups", "Vanilla")
+                if not os.path.exists(vanilla_dest):
+                    try:
+                        shutil.copytree(backup_dest, vanilla_dest)
+                        status_msg += "\n✔ Established initial 'Vanilla' profile."
+                    except: pass
 
         sb_root = os.path.join(ds3_path, "_Mod_Switchboard", "Executables")
         if not os.path.exists(sb_root): os.makedirs(sb_root)
@@ -311,10 +428,8 @@ class ModManagerApp:
         tk.Button(man_win, text="Select Mod File/Folder", command=pick_file, bg="#444444", fg="white", bd=0, activebackground="#666", activeforeground="white", font=FONT_MAIN).pack(pady=5)
         tk.Label(man_win, textvariable=path_var, bg=BG_COLOR, fg="#888", wraplength=450).pack()
 
-        tk.Label(man_win, text="Save Ext (Optional):", bg=BG_COLOR, fg=TEXT_COLOR, font=FONT_MAIN).pack()
-        ext_entry = ttk.Entry(man_win, width=10, font=FONT_MAIN, justify='center')
-        ext_entry.insert(0, ".sl2")
-        ext_entry.pack()
+        # Save Ext is now handled automatically by the "Vacuum" system (mirrors all files)
+        # Hidden from UI to simplify user experience
 
         def save_profile():
             name = name_entry.get().strip(); path = path_var.get().strip(); game = man_game_var.get()
@@ -324,11 +439,11 @@ class ModManagerApp:
             path = path.replace("/", "\\")
             new_entry = {}
             if game == "Elden Ring":
-                new_entry = { "name": name, "type": "external", "launcher": path, "save_ext": ".sl2" }
+                new_entry = { "name": name, "type": "external", "launcher": path, "save_ext": "AUTO" }
             else:
                 # Logic: File = Modern Exe. Folder = Legacy Exe.
                 is_file = os.path.isfile(path)
-                new_entry = { "name": name, "type": "external" if is_file else "internal", "exe": "DarkSoulsIII_Modern.exe" if is_file else "DarkSoulsIII_Legacy.exe", "mod_folder": path, "save_ext": ".sl2" }
+                new_entry = { "name": name, "type": "external" if is_file else "internal", "exe": "DarkSoulsIII_Modern.exe" if is_file else "DarkSoulsIII_Legacy.exe", "mod_folder": path, "save_ext": "AUTO" }
 
             self.config['profiles'][game].append(new_entry)
             save_config(self.config)

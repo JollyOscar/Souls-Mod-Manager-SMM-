@@ -18,8 +18,11 @@ _Mod_Switchboard/
 *.log
 
 # OS
+.DS_Store
 Thumbs.db
-Desktop.ini
+
+# Releases
+*.zip
 
 # VS Code
 .vscode/

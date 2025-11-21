@@ -12,11 +12,19 @@ set "LOG_FILE=%~dp0..\SMM_Debug.log"
 
 echo [%DATE% %TIME%] [DS3] Launching %MOD_NAME% >> "%LOG_FILE%"
 
-:: 1. Safety Nuke
+:: 1. Safety Nuke & Rescue
 echo [SMM] Clearing live save state...
 taskkill /F /IM "DarkSoulsIII.exe" >nul 2>&1
 for /d %%D in ("%SAVE_ROOT%\*") do (
     if /I not "%%~nxD"=="_Save_Backups" (
+        :: Check for stranded files (Crash Recovery)
+        dir /A-D /B "%%D" >nul 2>&1
+        if not errorlevel 1 (
+            echo [SMM] WARNING: Stranded save files detected!
+            echo [SMM] Moving to _RESCUE folder... >> "%LOG_FILE%"
+            if not exist "%SAVE_ROOT%\_Save_Backups\_RESCUE" mkdir "%SAVE_ROOT%\_Save_Backups\_RESCUE"
+            robocopy "%%D" "%SAVE_ROOT%\_Save_Backups\_RESCUE\%%~nxD" /MIR /R:3 /W:1 >> "%LOG_FILE%"
+        )
         del /Q "%%D\*.*" >nul 2>&1
     )
 )
@@ -26,8 +34,13 @@ if exist "%BACKUP_DIR%" (
     echo [SMM] Importing save state...
     for /d %%D in ("%SAVE_ROOT%\*") do (
         if /I not "%%~nxD"=="_Save_Backups" (
-            echo [%DATE% %TIME%] Restoring backup to %%D >> "%LOG_FILE%"
-            robocopy "%BACKUP_DIR%" "%%D" /E /IS /IT /R:2 /W:1 >> "%LOG_FILE%"
+            if exist "%BACKUP_DIR%\%%~nxD" (
+                echo [%DATE% %TIME%] Restoring Nested Backup to %%D >> "%LOG_FILE%"
+                robocopy "%BACKUP_DIR%\%%~nxD" "%%D" /MIR /R:2 /W:1 >> "%LOG_FILE%"
+            ) else (
+                echo [%DATE% %TIME%] Restoring Flat Backup to %%D >> "%LOG_FILE%"
+                robocopy "%BACKUP_DIR%" "%%D" /E /IS /IT /R:2 /W:1 /XD * >> "%LOG_FILE%"
+            )
         )
     )
 ) else (
@@ -99,7 +112,8 @@ if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 for /d %%D in ("%SAVE_ROOT%\*") do (
     if /I not "%%~nxD"=="_Save_Backups" (
         echo [%DATE% %TIME%] Backing up %%D >> "%LOG_FILE%"
-        robocopy "%%D" "%BACKUP_DIR%" /MIR /R:3 /W:1 >> "%LOG_FILE%"
+        if not exist "%BACKUP_DIR%\%%~nxD" mkdir "%BACKUP_DIR%\%%~nxD"
+        robocopy "%%D" "%BACKUP_DIR%\%%~nxD" /MIR /R:3 /W:1 >> "%LOG_FILE%"
         
         echo [%DATE% %TIME%] Nuking %%D >> "%LOG_FILE%"
         del /Q "%%D\*.*" >nul 2>&1
