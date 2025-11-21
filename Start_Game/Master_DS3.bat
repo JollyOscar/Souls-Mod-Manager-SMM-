@@ -8,21 +8,27 @@ set "MOD_PATH=%~3"
 set "GAME_DIR=%~4"
 set "SAVE_ROOT=%APPDATA%\DarkSoulsIII"
 set "BACKUP_DIR=%SAVE_ROOT%\_Save_Backups\%MOD_NAME%"
+set "LOG_FILE=%~dp0..\SMM_Debug.log"
 
-echo [SMM] Launching Dark Souls III: %MOD_NAME%
+echo [%DATE% %TIME%] [DS3] Launching %MOD_NAME% >> "%LOG_FILE%"
 
 :: 1. Safety Nuke
 echo [SMM] Clearing live save state...
 taskkill /F /IM "DarkSoulsIII.exe" >nul 2>&1
-for /d %%D in ("%SAVE_ROOT%\0*") do (
-    del /Q "%%D\*.*" >nul 2>&1
+for /d %%D in ("%SAVE_ROOT%\*") do (
+    if /I not "%%~nxD"=="_Save_Backups" (
+        del /Q "%%D\*.*" >nul 2>&1
+    )
 )
 
 :: 2. Inject State
 if exist "%BACKUP_DIR%" (
     echo [SMM] Importing save state...
-    for /d %%D in ("%SAVE_ROOT%\0*") do (
-        copy /Y "%BACKUP_DIR%\*.*" "%%D\" >nul
+    for /d %%D in ("%SAVE_ROOT%\*") do (
+        if /I not "%%~nxD"=="_Save_Backups" (
+            echo [%DATE% %TIME%] Restoring backup to %%D >> "%LOG_FILE%"
+            robocopy "%BACKUP_DIR%" "%%D" /E /IS /IT /R:2 /W:1 >> "%LOG_FILE%"
+        )
     )
 ) else (
     echo [SMM] No backup found. Starting fresh state.
@@ -86,12 +92,18 @@ if "%ERRORLEVEL%"=="0" goto WAIT_CLOSE
 :: 6. Backup & Cleanup
 :BACKUP_AND_EXIT
 echo [SMM] Game closed. Waiting for file release...
-timeout /t 2 /nobreak >nul
+timeout /t 3 /nobreak >nul
 echo [SMM] Capturing save state...
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
-for /d %%D in ("%SAVE_ROOT%\0*") do (
-    xcopy "%%D\*.*" "%BACKUP_DIR%\" /Y /R /Q >nul
-    del /Q "%%D\*.*" >nul
+
+for /d %%D in ("%SAVE_ROOT%\*") do (
+    if /I not "%%~nxD"=="_Save_Backups" (
+        echo [%DATE% %TIME%] Backing up %%D >> "%LOG_FILE%"
+        robocopy "%%D" "%BACKUP_DIR%" /MIR /R:3 /W:1 >> "%LOG_FILE%"
+        
+        echo [%DATE% %TIME%] Nuking %%D >> "%LOG_FILE%"
+        del /Q "%%D\*.*" >nul 2>&1
+    )
 )
 echo [SMM] State saved. Safe to close.
 timeout /t 3
