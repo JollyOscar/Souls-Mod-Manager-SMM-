@@ -85,10 +85,12 @@ if "%ERRORLEVEL%"=="0" goto WAIT_CLOSE
 
 :: 6. Backup & Cleanup
 :BACKUP_AND_EXIT
-echo [SMM] Game closed. Capturing save state...
+echo [SMM] Game closed. Waiting for file release...
+timeout /t 2 /nobreak >nul
+echo [SMM] Capturing save state...
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 for /d %%D in ("%SAVE_ROOT%\0*") do (
-    copy /Y "%%D\*.*" "%BACKUP_DIR%\" >nul
+    xcopy "%%D\*.*" "%BACKUP_DIR%\" /Y /R /Q >nul
     del /Q "%%D\*.*" >nul
 )
 echo [SMM] State saved. Safe to close.

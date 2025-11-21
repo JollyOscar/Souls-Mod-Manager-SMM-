@@ -49,9 +49,12 @@ tasklist /FI "IMAGENAME eq eldenring.exe" 2>NUL | find /I /N "eldenring.exe">NUL
 if "%ERRORLEVEL%"=="0" goto WAIT_CLOSE
 
 :: 5. Backup & Cleanup
+echo [SMM] Game closed. Waiting for file release...
+timeout /t 2 >nul
 echo [SMM] Capturing save state...
+if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 for /d %%D in ("%SAVE_ROOT%\*") do (
-    copy /Y "%%D\*.*" "%BACKUP_DIR%\" >nul
+    xcopy "%%D\*.*" "%BACKUP_DIR%\" /Y /R /Q >nul
     del /Q "%%D\*.*" >nul
 )
 
