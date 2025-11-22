@@ -340,6 +340,7 @@ class ModManagerApp:
         
         tk.Button(self.root, text="PLAY GAME", command=self.launch_game, font=FONT_BTN, bg="#008800", fg="white", width=20, bd=0, activebackground="#006600", activeforeground="white").pack(pady=(40, 10))
         tk.Button(self.root, text="BACKUP SAVE ONLY", command=self.backup_only, font=FONT_MAIN, bg="#444444", fg="white", width=20, bd=0, activebackground="#666666", activeforeground="white").pack(pady=5)
+        tk.Button(self.root, text="OPEN SAVE FOLDER", command=self.open_save_folder, font=FONT_MAIN, bg="#444444", fg="white", width=20, bd=0, activebackground="#666666", activeforeground="white").pack(pady=5)
         tk.Button(self.root, text="ADD / REMOVE MODS", command=self.open_manager, font=FONT_MAIN, bg=ACCENT_COLOR, fg="white", width=20, bd=0, activebackground=HOVER_COLOR, activeforeground="white").pack(pady=30)
 
         self.update_profiles()
@@ -358,6 +359,15 @@ class ModManagerApp:
         for p in self.config['profiles'][game]:
             if p['name'] == name: return p
         return None
+
+    def open_save_folder(self):
+        game = self.game_var.get()
+        appdata = os.environ['APPDATA']
+        save_root = os.path.join(appdata, "DarkSoulsIII") if game == "Dark Souls III" else os.path.join(appdata, "EldenRing")
+        if os.path.exists(save_root):
+            os.startfile(save_root)
+        else:
+            messagebox.showerror("Error", "Save folder not found.")
 
     def launch_game(self):
         profile = self.get_current_profile()

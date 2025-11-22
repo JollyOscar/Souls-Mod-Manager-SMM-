@@ -21,6 +21,18 @@ It allows you to swap between Vanilla (Online) and multiple Mods (Offline) witho
 
 ---
 
+## UPDATING FROM OLDER VERSIONS
+
+If you are updating from v1.x or v2.0:
+
+1. **Backup:** It is always good practice to backup your `AppData/Roaming/EldenRing` or `DarkSoulsIII` folders manually first.
+2. **Install:** Drag and drop the new files into your existing SMM folder.
+3. **Run:** Run `RUNTHISFIRST.bat` to update your shortcuts.
+4. **Launch:** Open the app. It will detect your existing `profiles.json` and keep all your mods.
+   * **Note:** On the first run, SMM v2.1 will perform a "Smart Sort" of your save folder. It may move loose `.cnv` (Convergence) or `.err` (Reforged) files into their own backup folders to keep things clean. This is normal!
+
+---
+
 ## INSTALLATION
 
 1. Extract this folder anywhere (Desktop, Documents, etc.).
