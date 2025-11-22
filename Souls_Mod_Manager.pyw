@@ -156,6 +156,14 @@ def run_first_time_setup(root_window):
             msg = f"Warning: Save folders not found for:\n{', '.join(missing_saves)}\n\nIf you have not played these games yet, please launch them once to create the save structure."
             messagebox.showwarning("Save Folder Missing", msg)
 
+        # Check for Mod Files in Game Directory (Safety Warning)
+        if paths["ds3"]:
+            dirty_files = ["dinput8.dll", "modengine.ini", "HoodiePatcher.dll"]
+            found_dirty = [f for f in dirty_files if os.path.exists(os.path.join(paths["ds3"], f))]
+            if found_dirty:
+                warn_msg = f"WARNING: Mod files detected in Dark Souls III folder:\n{', '.join(found_dirty)}\n\nSMM requires a CLEAN game folder to switch mods safely.\nIf you proceed, these files may be DELETED when you launch Vanilla.\n\nPlease move them to a separate folder before using SMM."
+                messagebox.showwarning("Mod Files Detected", warn_msg)
+
         default_data = {
             "settings": { "ds3_path": paths["ds3"], "er_path": paths["er"] },
             "profiles": {
