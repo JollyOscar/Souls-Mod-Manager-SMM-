@@ -88,8 +88,8 @@ tasklist /FI "IMAGENAME eq DarkSoulsIII.exe" 2>NUL | find /I /N "DarkSoulsIII.ex
 if "%ERRORLEVEL%"=="0" goto GAME_RUNNING
 
 set /a TIMEOUT_COUNT+=1
-if %TIMEOUT_COUNT% GEQ 8 (
-    echo [SMM] ERROR: Game did not start after 15 seconds.
+if %TIMEOUT_COUNT% GEQ 15 (
+    echo [SMM] ERROR: Game did not start after 30 seconds.
     goto BACKUP_AND_EXIT
 )
 goto WAIT_START

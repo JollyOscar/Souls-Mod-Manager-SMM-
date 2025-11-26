@@ -276,6 +276,26 @@ def create_dirs_and_install(ds3_path, er_path):
                         status_msg += "\n✔ Established initial 'Vanilla' profile."
                     except: pass
 
+        # SMART SORT (DS3): Detect specific mod extensions
+        mod_map = { ".co2": "Seamless Coop" }
+        detected_mods = []
+        
+        if os.path.exists(save_root):
+            for root, dirs, files in os.walk(save_root):
+                if "_Save_Backups" in root: continue
+                for file in files:
+                    ext = os.path.splitext(file)[1].lower()
+                    if ext in mod_map:
+                        mod_name = mod_map[ext]
+                        rel_path = os.path.relpath(root, save_root)
+                        target_dir = os.path.join(save_root, "_Save_Backups", mod_name, rel_path)
+                        if not os.path.exists(target_dir): os.makedirs(target_dir)
+                        try:
+                            shutil.copy2(os.path.join(root, file), target_dir)
+                            if mod_name not in detected_mods: detected_mods.append(mod_name)
+                        except: pass
+        if detected_mods: status_msg += f"\n✔ Detected & Organized DS3 saves for: {', '.join(detected_mods)}"
+
         sb_root = os.path.join(ds3_path, "_Mod_Switchboard", "Executables")
         if not os.path.exists(sb_root): os.makedirs(sb_root)
 
